@@ -1,0 +1,28 @@
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Ignore virtual environments
+venv/
+.venv/
+vision_env/
+env/
+
+# Ignore OS files
+.DS_Store
+
+# Ignore local outputs from your app
+outputs/
+uploads/
+reports/
+
+# Ignore huge local dependencies
+*.dll
+*.pyd
+*.so
+*.exe
+
+# Ignore videos
+*.mp4
+*.mov
+*.avi
