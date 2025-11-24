@@ -237,10 +237,14 @@ def process_video(input_path, slow_factor=1.0):
                 print(f"[processor] {frame_idx} frames, {time.time() - t0:.1f}s")
 
     finally:
-        cap.release()
-        writer.release()
-        analyzer.close()
-        cv2.destroyAllWindows()
+        try: cap.release()
+        except: pass
+        try: writer.release()
+        except: pass
+        try: analyzer.close()
+        except: pass
+    # Do NOT call cv2.destroyAllWindows() in Streamlit Cloud
+
 
     df = pd.DataFrame(rows)
     csv_path = os.path.join("outputs", f"{base}_framewise.csv")
