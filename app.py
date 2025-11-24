@@ -9,6 +9,8 @@ import pandas as pd
 from video_processor import process_video
 from cricket_pose import render_frame_overlay, write_frame_pdf
 
+os.makedirs("outputs", exist_ok=True)
+
 st.set_page_config(page_title="Cricket Analyzer", layout="wide")
 st.title("🏏 Pose Analyzer (Framewise + Live Speed Control)")
 
@@ -58,9 +60,12 @@ if uploaded:
         st.session_state.annotated_video = out_video
         st.session_state.csv_path = csv_path
 
+        if not os.path.exists(out_video):
+            st.error(f"Output video not found: {out_video}")
+            st.stop()
+
         with open(out_video, "rb") as f:
             b64 = base64.b64encode(f.read()).decode("utf-8")
-            st.session_state.video_bytes_b64 = b64
 
         st.success(f"Analysis completed in {elapsed:.1f}s")
         st.rerun()

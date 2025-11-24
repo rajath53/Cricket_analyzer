@@ -117,7 +117,7 @@ def process_video(input_path, slow_factor=1.0):
     out_h = height
     writer_fps = max(1.0, fps * slow_factor)
 
-    fourcc = cv2.VideoWriter_fourcc(*"avc1")
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(out_path, fourcc, writer_fps, (out_w, out_h))
 
     rows = []
