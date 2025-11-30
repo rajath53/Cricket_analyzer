@@ -777,4 +777,4 @@ if st.session_state.analysis_df is not None and not st.session_state.analysis_df
 
     styled_df = df_to_display.style.apply(highlight_row, axis=1)
 
-    st.dataframe(styled_df, height=300, use_container_width=True)
+    st.dataframe(styled_df, height=300, use_container_width=True)
