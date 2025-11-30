@@ -221,57 +221,90 @@ if 'frame_count_total' not in st.session_state: # Store total frames
 
 
 # --- Interactive Frame Player Function (remains the same) ---
+# --- Interactive Frame Player Function (REPLACEMENT CODE) ---
 def play_frame_simulation():
-    """Renders frames sequentially to simulate video playback."""
+    """Renders frames sequentially to simulate video playback using the Streamlit rerun cycle."""
     
     if not st.session_state.annotated_frame_bytes:
         st.warning("No analyzed frames available to play.")
         st.session_state.is_playing = False
         return
 
-    st.session_state.is_playing = True
+    # Use st.empty() for placeholders outside of the animation logic for stability
+    # NOTE: These placeholders must exist outside the function's first call if they are to persist visually, 
+    # but defining them inside works for the rerun cycle if they are consistently used.
+    # For robust behavior, we will ensure they are defined or retrieved here.
+    
+    # Define/Retrieve placeholders for image and status.
+    # Since this function is called repeatedly via rerun, we ensure a clean update.
+    # We will use st.session_state to store the actual placeholder objects if needed 
+    # for use outside this function, but for simple use, defining them here is fine.
+    
+    # Let's define the placeholders once at the start of the function call for simplicity 
+    # as the rerun causes the entire script to execute from the top.
+    
+    # We will define a simple container structure in the main app logic 
+    # and pass the containers or use st.empty() within the function.
     
     video_placeholder = st.empty()
     status_placeholder = st.empty()
     
     frame_bytes_dict = st.session_state.annotated_frame_bytes
     output_fps = st.session_state.output_fps
-    delay = 1.0 / output_fps
+    delay = 1.0 / output_fps # Delay in seconds
     frame_keys = sorted(frame_bytes_dict.keys())
     
-    status_placeholder.info("Playback in progress... Press 'Stop' to pause.")
-
-    start_index = st.session_state.current_frame_index 
+    # Get the current frame index from session state
+    current_index = st.session_state.current_frame_index
     
-    for i in range(start_index, len(frame_keys)):
-        if not st.session_state.is_playing:
-            status_placeholder.info(f"Playback paused at frame {st.session_state.current_frame_index}.")
-            break
-            
-        frame_num = frame_keys[i]
-        st.session_state.current_frame_index = frame_num 
-        frame_bytes = frame_bytes_dict[frame_num]
-        
-        frame_array = np.frombuffer(frame_bytes, np.uint8)
-        combined_frame_bgr = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
-        
-        if combined_frame_bgr is not None:
-            combined_frame_rgb = cv2.cvtColor(combined_frame_bgr, cv2.COLOR_BGR2RGB)
-            
-            video_placeholder.image(
-                combined_frame_rgb,
-                caption=f"Frame {frame_num} / {len(frame_keys) - 1} - Playback FPS: {output_fps:.2f}",
-                use_container_width=True 
-            )
-            time.sleep(delay)
-            
-        if i == len(frame_keys) - 1:
-            st.session_state.is_playing = False
-            st.session_state.current_frame_index = 0 
-            status_placeholder.success("Playback Simulation Complete.")
-    
-    st.rerun()
+    # 1. Check for end of playback or 'Stop' signal
+    if not st.session_state.is_playing or current_index >= len(frame_keys):
+        st.session_state.is_playing = False
+        if current_index >= len(frame_keys):
+             st.session_state.current_frame_index = 0 # Reset for next play
+             status_placeholder.success("Playback Simulation Complete.")
+        else:
+             # Important: If paused/stopped, ensure the last visible frame is retained/updated
+             # This requires displaying the frame before the return, or relying on the slider state 
+             # outside of this function to display the last frame.
+             status_placeholder.info(f"Playback paused at frame {frame_keys[current_index-1] if current_index > 0 else frame_keys[0]}.")
+        return 
 
+    # 2. Display the current frame
+    frame_num = frame_keys[current_index]
+    frame_bytes = frame_bytes_dict[frame_num]
+    
+    frame_array = np.frombuffer(frame_bytes, np.uint8)
+    # The stored bytes are already BGR from cv2.imencode in the analysis loop
+    combined_frame_bgr = cv2.imdecode(frame_array, cv2.IMREAD_COLOR) 
+    
+    if combined_frame_bgr is not None:
+        # Convert BGR to RGB for Streamlit/Web Display
+        combined_frame_rgb = cv2.cvtColor(combined_frame_bgr, cv2.COLOR_BGR2RGB)
+        
+        # 🚨 CRITICAL: Use video_placeholder.image() to replace the old content
+        # Ensure image data is fresh on every rerun.
+        video_placeholder.image(
+            combined_frame_rgb,
+            caption=f"Frame {frame_num} / {len(frame_keys) - 1} - Playback FPS: {output_fps:.2f}",
+            use_container_width=True 
+        )
+        
+        status_placeholder.info(f"Playback in progress... Frame {frame_num} / {len(frame_keys) - 1}")
+        
+        # 3. Schedule the next frame update
+        # CRITICAL: Increment index for the next run
+        st.session_state.current_frame_index = current_index + 1
+        
+        # CRITICAL: Use time.sleep to enforce the frame rate, and then force a rerun.
+        # This blocks only for the duration of one frame's delay.
+        time.sleep(delay) 
+        st.rerun() # Force rerun to execute the script again for the next frame
+    
+    # If the frame was None, stop playing
+    else:
+         st.session_state.is_playing = False
+         status_placeholder.error(f"Error decoding Frame {frame_num}. Playback stopped.")
 
 # --- Main Streamlit App ---
 st.title("🏏 Frame-by-Frame Cricket Analysis")
